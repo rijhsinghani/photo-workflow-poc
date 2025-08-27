@@ -1,0 +1,51 @@
+{
+  "groupName": "Group_02_2024-01-15_14-15",
+  "createdAt": "2025-08-27T22:19:06.618Z",
+  "fileCount": 5,
+  "timeSpan": {
+    "start": "2024-01-15T14:15:00.000Z",
+    "end": "2024-01-15T14:25:00.000Z",
+    "durationMinutes": 10
+  },
+  "cameras": [
+    "Unknown"
+  ],
+  "locations": [],
+  "files": [
+    {
+      "fileName": "IMG_201.jpg",
+      "timestamp": "2024-01-15T14:15:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "IMG_202.jpg",
+      "timestamp": "2024-01-15T14:17:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "IMG_203.jpg",
+      "timestamp": "2024-01-15T14:20:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "IMG_204.jpg",
+      "timestamp": "2024-01-15T14:22:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3120,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "IMG_205.jpg",
+      "timestamp": "2024-01-15T14:25:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    }
+  ]
+}

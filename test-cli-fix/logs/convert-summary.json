@@ -1,0 +1,23 @@
+{
+  "sessionId": "9c94387a-8317-4908-89ef-a5dd5cebe620",
+  "stageName": "convert",
+  "startTime": "2025-08-27T22:43:32.932Z",
+  "endTime": "2025-08-27T22:43:33.587Z",
+  "duration": 652,
+  "totalEvents": 27,
+  "totalErrors": 0,
+  "totalDecisions": 0,
+  "totalFallbacks": 0,
+  "performanceMetrics": 1,
+  "summary": {
+    "stage": "convert",
+    "success": true,
+    "filesProcessed": 6,
+    "outputPath": "test-cli-fix/convert"
+  },
+  "stats": {
+    "errorRate": 0,
+    "avgOperationTime": 649,
+    "memoryPeakUsage": 40223784
+  }
+}

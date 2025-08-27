@@ -1,0 +1,37 @@
+{
+  "groupName": "Group_01_2024-01-15_09-30",
+  "createdAt": "2025-08-27T22:19:06.616Z",
+  "fileCount": 3,
+  "timeSpan": {
+    "start": "2024-01-15T09:30:00.000Z",
+    "end": "2024-01-15T09:35:00.000Z",
+    "durationMinutes": 5
+  },
+  "cameras": [
+    "Unknown"
+  ],
+  "locations": [],
+  "files": [
+    {
+      "fileName": "DSC_001.jpg",
+      "timestamp": "2024-01-15T09:30:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "DSC_002.jpg",
+      "timestamp": "2024-01-15T09:32:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "DSC_003.jpg",
+      "timestamp": "2024-01-15T09:35:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    }
+  ]
+}

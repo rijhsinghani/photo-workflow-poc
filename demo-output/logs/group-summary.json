@@ -1,0 +1,22 @@
+{
+  "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+  "stageName": "group",
+  "startTime": "2025-08-27T22:19:06.598Z",
+  "endTime": "2025-08-27T22:19:06.663Z",
+  "duration": 0,
+  "totalEvents": 27,
+  "totalErrors": 0,
+  "totalDecisions": 2,
+  "totalFallbacks": 0,
+  "performanceMetrics": 3,
+  "summary": {
+    "filesProcessed": 15,
+    "groupsCreated": 3,
+    "success": true
+  },
+  "stats": {
+    "errorRate": 0,
+    "avgOperationTime": 4.666666666666667,
+    "memoryPeakUsage": 31768736
+  }
+}

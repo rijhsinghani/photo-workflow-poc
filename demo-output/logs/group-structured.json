@@ -1,0 +1,650 @@
+{
+  "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+  "stage": "group",
+  "timestamp": "2025-08-27T22:19:06.663Z",
+  "events": [
+    {
+      "id": "ef907582-ad33-4772-92de-4ba996dafb9a",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.599Z",
+      "stage": "group",
+      "eventType": "group_stage_start",
+      "level": "info",
+      "data": {
+        "inputPath": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/mock-photos",
+        "outputPath": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/grouped",
+        "timeThreshold": 10,
+        "dryRun": false
+      },
+      "memoryUsage": {
+        "rss": 161366016,
+        "heapTotal": 54624256,
+        "heapUsed": 31007184,
+        "external": 1980294
+      }
+    },
+    {
+      "id": "2f5bd6a7-cfd8-4b3a-b16c-9dd4e566fe45",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.602Z",
+      "stage": "group",
+      "eventType": "session_start",
+      "level": "info",
+      "data": {
+        "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+        "stageName": "group",
+        "timestamp": "2025-08-27T22:19:06.598Z",
+        "environment": {
+          "nodeVersion": "v22.17.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "cwd": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc"
+        }
+      },
+      "memoryUsage": {
+        "rss": 161611776,
+        "heapTotal": 54886400,
+        "heapUsed": 31218384,
+        "external": 1982070
+      }
+    },
+    {
+      "id": "e0c97482-eff4-4841-bbc6-72d61fbd44a9",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.605Z",
+      "stage": "group",
+      "eventType": "images_found",
+      "level": "info",
+      "data": {
+        "totalFiles": 15,
+        "formats": {
+          ".jpg": 15
+        }
+      },
+      "memoryUsage": {
+        "rss": 161808384,
+        "heapTotal": 54886400,
+        "heapUsed": 31760464,
+        "external": 1989014
+      }
+    },
+    {
+      "id": "df6d1a85-b4f1-486a-ad72-3b9b68142943",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.605Z",
+      "stage": "group",
+      "eventType": "metadata_extraction_start",
+      "level": "info",
+      "data": {
+        "totalFiles": 15
+      },
+      "memoryUsage": {
+        "rss": 161808384,
+        "heapTotal": 54886400,
+        "heapUsed": 31763456,
+        "external": 1989014
+      }
+    },
+    {
+      "id": "1ea41f80-6e3b-46b7-aeda-f4802b95762e",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.605Z",
+      "stage": "group",
+      "eventType": "operation_start",
+      "level": "info",
+      "data": {
+        "operation": "extract_all_metadata"
+      },
+      "memoryUsage": {
+        "rss": 161808384,
+        "heapTotal": 54886400,
+        "heapUsed": 31768736,
+        "external": 1989014
+      }
+    },
+    {
+      "id": "e6c29a82-a8c6-47b2-9e14-316e8c49ee8e",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.611Z",
+      "stage": "group",
+      "eventType": "metadata_progress",
+      "level": "info",
+      "data": {
+        "processed": 10,
+        "total": 15,
+        "errors": 0
+      },
+      "memoryUsage": {
+        "rss": 166117376,
+        "heapTotal": 59604992,
+        "heapUsed": 26587328,
+        "external": 1989126
+      }
+    },
+    {
+      "id": "797bd16a-042b-48da-b583-ff55e3c7c6bb",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.613Z",
+      "stage": "group",
+      "eventType": "performance",
+      "level": "info",
+      "data": {
+        "operation": "extract_all_metadata",
+        "duration": "8ms",
+        "metadata": {
+          "totalFiles": 15,
+          "processed": 15,
+          "errors": 0,
+          "successRate": "100.00%"
+        }
+      },
+      "memoryUsage": {
+        "rss": 166182912,
+        "heapTotal": 59604992,
+        "heapUsed": 27456680,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "bcab3eaf-d1d1-4738-be45-ff7d968a9f0a",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "operation_end",
+      "level": "info",
+      "data": {
+        "operation": "extract_all_metadata",
+        "duration": 8
+      },
+      "memoryUsage": {
+        "rss": 166182912,
+        "heapTotal": 59604992,
+        "heapUsed": 27462168,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "570be86a-2aad-4738-8683-16f41169fdaf",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "operation_start",
+      "level": "info",
+      "data": {
+        "operation": "create_temporal_groups"
+      },
+      "memoryUsage": {
+        "rss": 166215680,
+        "heapTotal": 59604992,
+        "heapUsed": 27482616,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "7e9eb3e4-162b-42bb-88c0-e2e7aed314bc",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "decision",
+      "level": "info",
+      "data": {
+        "type": "new_group_created",
+        "outcome": "new_group",
+        "reasoning": "Time gap of 280 minutes exceeded threshold of 10 minutes"
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27507496,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "fd23d536-8f12-488e-b464-cd175e6b160f",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "decision",
+      "level": "info",
+      "data": {
+        "type": "new_group_created",
+        "outcome": "new_group",
+        "reasoning": "Time gap of 260 minutes exceeded threshold of 10 minutes"
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27533656,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "8a691f36-defb-45f6-b905-b778454f1181",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "performance",
+      "level": "info",
+      "data": {
+        "operation": "create_temporal_groups",
+        "duration": "0ms",
+        "metadata": {
+          "totalGroups": 3,
+          "averageGroupSize": 5,
+          "groupSizes": [
+            3,
+            5,
+            7
+          ]
+        }
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27565256,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "5b0d2e62-79b0-456e-a88e-eb649c84c399",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "operation_end",
+      "level": "info",
+      "data": {
+        "operation": "create_temporal_groups",
+        "duration": 0
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27569896,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "de2de894-3198-41d0-9a6d-c018e225dbf5",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "similarity_analysis_start",
+      "level": "info",
+      "data": {
+        "groupCount": 3
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27574312,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "3ee5f8f8-6756-479e-8b29-8021e6469aba",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "similarity_analysis_complete",
+      "level": "info",
+      "data": {
+        "originalGroups": 3,
+        "refinedGroups": 3
+      },
+      "memoryUsage": {
+        "rss": 166248448,
+        "heapTotal": 59604992,
+        "heapUsed": 27583424,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "62bb3448-4698-4101-8b87-67c8655eb5d6",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "operation_start",
+      "level": "info",
+      "data": {
+        "operation": "organize_files_into_groups"
+      },
+      "memoryUsage": {
+        "rss": 166248448,
+        "heapTotal": 59604992,
+        "heapUsed": 27589792,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "4a3e77cc-a50e-43cd-9716-88b70e1fbc0a",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "eventType": "group_directory_created",
+      "level": "info",
+      "data": {
+        "groupName": "Group_01_2024-01-15_09-30",
+        "groupDir": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/grouped/Group_01_2024-01-15_09-30",
+        "fileCount": 3
+      },
+      "memoryUsage": {
+        "rss": 166248448,
+        "heapTotal": 59604992,
+        "heapUsed": 27596976,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "c1b6106f-15e4-4bd6-bfc5-7a9e8826952e",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.616Z",
+      "stage": "group",
+      "eventType": "group_directory_created",
+      "level": "info",
+      "data": {
+        "groupName": "Group_02_2024-01-15_14-15",
+        "groupDir": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/grouped/Group_02_2024-01-15_14-15",
+        "fileCount": 5
+      },
+      "memoryUsage": {
+        "rss": 166313984,
+        "heapTotal": 59867136,
+        "heapUsed": 27846296,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "b1f9c3e1-c0cb-4297-a53c-9893c3093d11",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.618Z",
+      "stage": "group",
+      "eventType": "group_directory_created",
+      "level": "info",
+      "data": {
+        "groupName": "Group_03_2024-01-15_18-45",
+        "groupDir": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/grouped/Group_03_2024-01-15_18-45",
+        "fileCount": 7
+      },
+      "memoryUsage": {
+        "rss": 166363136,
+        "heapTotal": 59867136,
+        "heapUsed": 28191616,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "d79be154-4294-444b-99dc-462dea47fb6b",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.619Z",
+      "stage": "group",
+      "eventType": "file_copy_progress",
+      "level": "info",
+      "data": {
+        "filesCopied": 10,
+        "currentGroup": "Group_03_2024-01-15_18-45"
+      },
+      "memoryUsage": {
+        "rss": 166379520,
+        "heapTotal": 59867136,
+        "heapUsed": 28343016,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "9393c819-c3fd-49d8-a42b-2ce75d1da188",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.620Z",
+      "stage": "group",
+      "eventType": "performance",
+      "level": "info",
+      "data": {
+        "operation": "organize_files_into_groups",
+        "duration": "6ms",
+        "metadata": {
+          "totalGroups": 3,
+          "totalFilesCopied": 15
+        }
+      },
+      "memoryUsage": {
+        "rss": 166379520,
+        "heapTotal": 59867136,
+        "heapUsed": 28668112,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "3db96b48-0f18-44f6-bfe8-c8d22597d964",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.620Z",
+      "stage": "group",
+      "eventType": "operation_end",
+      "level": "info",
+      "data": {
+        "operation": "organize_files_into_groups",
+        "duration": 6
+      },
+      "memoryUsage": {
+        "rss": 166379520,
+        "heapTotal": 59867136,
+        "heapUsed": 28673064,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "ae876c20-92af-4629-a285-f9a209eccd31",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.620Z",
+      "stage": "group",
+      "eventType": "group_stage_complete",
+      "level": "info",
+      "data": {
+        "totalFiles": 15,
+        "filesProcessed": 15,
+        "groupsCreated": 3,
+        "averageGroupSize": 5,
+        "duration": 21
+      },
+      "memoryUsage": {
+        "rss": 166395904,
+        "heapTotal": 59867136,
+        "heapUsed": 28690512,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "cb6c2774-6b1c-4213-b956-bb1228c6e4fb",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.621Z",
+      "stage": "group",
+      "eventType": "thumbnail_generation_start",
+      "level": "info",
+      "data": {
+        "totalImages": 15
+      },
+      "memoryUsage": {
+        "rss": 166395904,
+        "heapTotal": 59867136,
+        "heapUsed": 28736088,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "998b9b52-2b31-4254-bf8e-41e7f86ebf8e",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.661Z",
+      "stage": "group",
+      "eventType": "thumbnail_generation_complete",
+      "level": "info",
+      "data": {
+        "processed": 15,
+        "failed": 0
+      },
+      "memoryUsage": {
+        "rss": 167936000,
+        "heapTotal": 59867136,
+        "heapUsed": 29085760,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "2905c883-510f-44f7-b128-436d5cc84b8f",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.663Z",
+      "stage": "group",
+      "eventType": "html_report_generated",
+      "level": "info",
+      "data": {
+        "reportPath": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/reports/GROUPING_REPORT.html",
+        "groupCount": 3,
+        "thumbnailCount": 15
+      },
+      "memoryUsage": {
+        "rss": 168034304,
+        "heapTotal": 59867136,
+        "heapUsed": 29345256,
+        "external": 2044954
+      }
+    },
+    {
+      "id": "1b73f7a7-c47b-485f-ba3a-9f9bee01e4e4",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.663Z",
+      "stage": "group",
+      "eventType": "html_visual_report_generated",
+      "level": "info",
+      "data": {
+        "reportPath": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/photo-workflow-poc/demo-output/reports/GROUPING_REPORT.html",
+        "thumbnailCount": 15,
+        "groupCount": 3
+      },
+      "memoryUsage": {
+        "rss": 168034304,
+        "heapTotal": 59867136,
+        "heapUsed": 29349584,
+        "external": 2044954
+      }
+    },
+    {
+      "id": "5e65e66a-9ea7-4774-bfdc-219409d2bf8c",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.663Z",
+      "stage": "group",
+      "eventType": "stage_end",
+      "level": "info",
+      "data": {
+        "stage": "group",
+        "duration": 0,
+        "summary": {
+          "errorRate": 0,
+          "avgOperationTime": 4.666666666666667,
+          "memoryPeakUsage": 31768736
+        }
+      },
+      "memoryUsage": {
+        "rss": 168050688,
+        "heapTotal": 59867136,
+        "heapUsed": 29370936,
+        "external": 2044954
+      }
+    }
+  ],
+  "errors": [],
+  "decisions": [
+    {
+      "id": "4b6efa45-ab3f-4a32-bfa3-e093f7437eff",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "decisionType": "new_group_created",
+      "context": {
+        "timeDiff": 280,
+        "timeThreshold": 10,
+        "previousGroup": "Group_02_2024-01-15_14-15",
+        "newGroupStartTime": "2024-01-15T14:15:00.000Z"
+      },
+      "outcome": "new_group",
+      "reasoning": "Time gap of 280 minutes exceeded threshold of 10 minutes",
+      "confidence": null
+    },
+    {
+      "id": "ffe0e05f-a740-4d49-90ee-02031729c43f",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "decisionType": "new_group_created",
+      "context": {
+        "timeDiff": 260,
+        "timeThreshold": 10,
+        "previousGroup": "Group_03_2024-01-15_18-45",
+        "newGroupStartTime": "2024-01-15T18:45:00.000Z"
+      },
+      "outcome": "new_group",
+      "reasoning": "Time gap of 260 minutes exceeded threshold of 10 minutes",
+      "confidence": null
+    }
+  ],
+  "fallbacks": [],
+  "performance": [
+    {
+      "id": "9c23f389-3f86-4607-a4c5-b4f4518acef0",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.613Z",
+      "stage": "group",
+      "operation": "extract_all_metadata",
+      "duration": 8,
+      "metadata": {
+        "totalFiles": 15,
+        "processed": 15,
+        "errors": 0,
+        "successRate": "100.00%"
+      },
+      "memoryUsage": {
+        "rss": 166182912,
+        "heapTotal": 59604992,
+        "heapUsed": 27453600,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "47f5a8f1-4444-49b8-9af8-8fdd2283a146",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.614Z",
+      "stage": "group",
+      "operation": "create_temporal_groups",
+      "duration": 0,
+      "metadata": {
+        "totalGroups": 3,
+        "averageGroupSize": 5,
+        "groupSizes": [
+          3,
+          5,
+          7
+        ]
+      },
+      "memoryUsage": {
+        "rss": 166232064,
+        "heapTotal": 59604992,
+        "heapUsed": 27563904,
+        "external": 2016702
+      }
+    },
+    {
+      "id": "04763686-598a-4016-944a-b1a5abe51ddb",
+      "sessionId": "7eb3cb8f-049f-4374-9d07-aa80ae7fb6ea",
+      "timestamp": "2025-08-27T22:19:06.620Z",
+      "stage": "group",
+      "operation": "organize_files_into_groups",
+      "duration": 6,
+      "metadata": {
+        "totalGroups": 3,
+        "totalFilesCopied": 15
+      },
+      "memoryUsage": {
+        "rss": 166379520,
+        "heapTotal": 59867136,
+        "heapUsed": 28666760,
+        "external": 2016702
+      }
+    }
+  ]
+}

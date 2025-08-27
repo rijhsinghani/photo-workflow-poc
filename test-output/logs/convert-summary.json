@@ -1,0 +1,23 @@
+{
+  "sessionId": "48f624ac-049d-4e89-81ea-f4587630c573",
+  "stageName": "convert",
+  "startTime": "2025-08-27T23:13:06.389Z",
+  "endTime": "2025-08-27T23:13:07.033Z",
+  "duration": 642,
+  "totalEvents": 27,
+  "totalErrors": 0,
+  "totalDecisions": 0,
+  "totalFallbacks": 0,
+  "performanceMetrics": 1,
+  "summary": {
+    "stage": "convert",
+    "success": true,
+    "filesProcessed": 6,
+    "outputPath": "test-output/convert"
+  },
+  "stats": {
+    "errorRate": 0,
+    "avgOperationTime": 641,
+    "memoryPeakUsage": 37243040
+  }
+}

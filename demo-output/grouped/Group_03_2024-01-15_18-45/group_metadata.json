@@ -1,0 +1,65 @@
+{
+  "groupName": "Group_03_2024-01-15_18-45",
+  "createdAt": "2025-08-27T22:19:06.620Z",
+  "fileCount": 7,
+  "timeSpan": {
+    "start": "2024-01-15T18:45:00.000Z",
+    "end": "2024-01-15T18:57:00.000Z",
+    "durationMinutes": 12
+  },
+  "cameras": [
+    "Unknown"
+  ],
+  "locations": [],
+  "files": [
+    {
+      "fileName": "A7R_1001.jpg",
+      "timestamp": "2024-01-15T18:45:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1002.jpg",
+      "timestamp": "2024-01-15T18:47:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1003.jpg",
+      "timestamp": "2024-01-15T18:49:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1004.jpg",
+      "timestamp": "2024-01-15T18:51:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3120,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1005.jpg",
+      "timestamp": "2024-01-15T18:53:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1006.jpg",
+      "timestamp": "2024-01-15T18:55:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3120,
+      "dimensions": "800x600"
+    },
+    {
+      "fileName": "A7R_1007.jpg",
+      "timestamp": "2024-01-15T18:57:00.000Z",
+      "camera": "Unknown",
+      "fileSize": 3119,
+      "dimensions": "800x600"
+    }
+  ]
+}

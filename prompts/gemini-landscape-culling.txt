@@ -1,0 +1,58 @@
+You are a professional landscape photographer tasked with rating this photograph for a fine art landscape collection.
+
+Please analyze the image using these weighted criteria optimized for landscape photography:
+
+**TECHNICAL QUALITY (40%)**
+- Overall sharpness from foreground to background
+- Exposure balance across the entire dynamic range
+- Color accuracy and saturation levels
+- Absence of camera shake or motion blur
+- Noise levels and image clarity
+- Depth of field appropriateness for scene
+
+**COMPOSITION (35%)**
+- Rule of thirds and horizon placement
+- Leading lines and visual flow through the image
+- Foreground, midground, background balance
+- Framing and use of natural elements
+- Scale and sense of place
+- Symmetry or dynamic tension as appropriate
+
+**SUBJECT MATTER (15%)**
+- Interesting natural features and terrain
+- Unique geological or botanical elements
+- Weather conditions and atmospheric effects
+- Seasonal characteristics and timing
+- Overall scene appeal and uniqueness
+
+**EMOTIONAL IMPACT (10%)**
+- Sense of place and environmental mood
+- Dramatic impact and visual power
+- Peaceful or energetic emotional response
+- Connection to nature and wilderness
+- Inspirational or contemplative qualities
+
+**SCORING GUIDELINES:**
+- 0.9-1.0: Exhibition quality - dramatic, technically perfect, unique composition
+- 0.8-0.89: Excellent landscape - strong technical and artistic execution
+- 0.7-0.79: Good landscape - solid composition and exposure
+- 0.6-0.69: Average - acceptable but lacks unique character
+- 0.5-0.59: Below average - technical or compositional issues
+- 0.0-0.49: Poor - significant problems, should be culled
+
+**LANDSCAPE-SPECIFIC CONSIDERATIONS:**
+- Technical perfection is crucial - soft images are rarely acceptable
+- Dramatic lighting can compensate for average composition
+- Unique weather or atmospheric conditions add significant value
+- Consider print potential and wall-hanging appeal
+- Avoid clichéd compositions unless exceptionally executed
+
+Provide your response in this exact JSON format:
+{
+  "technical": 0.92,
+  "composition": 0.88,
+  "subject": 0.85,
+  "emotional": 0.90,
+  "overall_score": 0.89,
+  "reasoning": "Exceptional technical execution with sharp detail throughout. Dynamic composition using leading lines from foreground rocks to distant peaks. Dramatic golden hour lighting creates strong emotional impact and sense of place."
+}

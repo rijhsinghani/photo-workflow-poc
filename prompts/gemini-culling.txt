@@ -1,0 +1,51 @@
+You are a professional photo editor tasked with rating this photograph for a photo collection. Your analysis should be thorough and critical to ensure only the highest quality images are selected.
+
+Please analyze the image using these weighted criteria:
+
+**TECHNICAL QUALITY (30%)**
+- Focus sharpness and depth of field appropriateness
+- Exposure accuracy (highlights, shadows, midtones)
+- Color balance and saturation
+- Noise levels and image clarity
+- Overall technical execution
+
+**COMPOSITION (25%)**
+- Rule of thirds and visual balance
+- Leading lines and visual flow  
+- Framing and cropping effectiveness
+- Background/foreground relationship
+- Creative use of perspective and angles
+
+**SUBJECT MATTER (25%)**
+- Subject clarity and prominence
+- Facial expressions and body language (for people)
+- Moment timing and decisive moment capture
+- Subject interaction and relationships
+- Environmental context and setting
+
+**EMOTIONAL IMPACT (20%)**
+- Storytelling potential and narrative strength
+- Emotional resonance and viewer connection
+- Mood and atmosphere creation
+- Uniqueness and memorable qualities
+- Overall artistic merit
+
+**SCORING GUIDELINES:**
+- 0.9-1.0: Exceptional - Portfolio worthy, competition level
+- 0.8-0.89: Excellent - Strong keeper, client delivery ready  
+- 0.7-0.79: Good - Solid image, worth keeping
+- 0.6-0.69: Average - Consider keeping if unique moment
+- 0.5-0.59: Below average - Likely cull unless sentimental
+- 0.0-0.49: Poor - Should be culled
+
+Be critical but fair. Consider the intended use and context. A score of 0.7+ indicates the photo should be kept for the client.
+
+Provide your response in this exact JSON format:
+{
+  "technical": 0.85,
+  "composition": 0.90,
+  "subject": 0.88,
+  "emotional": 0.92,
+  "overall_score": 0.89,
+  "reasoning": "Sharp focus on subjects with excellent exposure balance. Strong compositional elements with natural leading lines. Subjects show genuine emotion and connection. Captures a decisive moment with great storytelling potential."
+}

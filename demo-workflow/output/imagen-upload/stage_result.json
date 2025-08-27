@@ -1,0 +1,12 @@
+{
+  "stage": "imagen-upload",
+  "workflowId": "dbd9236f-bf4c-4dd6-9f6c-46a13f184c35",
+  "timestamp": "2025-08-27T23:13:18.117Z",
+  "success": true,
+  "groupsProcessed": 0,
+  "filesUploaded": 0,
+  "uploadTasks": [],
+  "errors": [],
+  "mockMode": true,
+  "duration": 1000
+}

@@ -1,0 +1,58 @@
+{
+  "stage": "convert",
+  "timestamp": "2025-08-27T22:43:33.582Z",
+  "summary": {
+    "totalInputFiles": 6,
+    "filesProcessed": 6,
+    "filesSkipped": 0,
+    "errors": 0,
+    "duration": 646,
+    "averageTimePerFile": 107.66666666666667
+  },
+  "fileFormats": {
+    ".arw": 6
+  },
+  "errors": [],
+  "outputFiles": [
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00154.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00154.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    },
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00201.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00201.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    },
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00214.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00214.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    },
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00220.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00220.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    },
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00226.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00226.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    },
+    {
+      "inputFile": "/Users/sameerrijhsinghani/Library/Mobile Documents/com~apple~CloudDocs/test-small/RPV00251.ARW",
+      "outputFile": "test-cli-fix/convert/RPV00251.jpg",
+      "mockConversion": true,
+      "timestampVerified": true
+    }
+  ],
+  "metadataPreservation": {
+    "filesWithMetadata": 6,
+    "timestampVerificationRate": "100.00%"
+  }
+}

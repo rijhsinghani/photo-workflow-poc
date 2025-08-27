@@ -1,0 +1,72 @@
+{
+  "stage": "group",
+  "timestamp": "2025-08-27T22:19:06.620Z",
+  "summary": {
+    "totalInputFiles": 15,
+    "groupsCreated": 3,
+    "averageGroupSize": 5,
+    "duration": 21
+  },
+  "groupDetails": [
+    {
+      "name": "Group_01_2024-01-15_09-30",
+      "fileCount": 3,
+      "timeSpan": {
+        "start": "2024-01-15T09:30:00.000Z",
+        "end": "2024-01-15T09:35:00.000Z",
+        "durationMinutes": 5
+      },
+      "cameras": [
+        "Unknown"
+      ],
+      "hasLocation": false,
+      "averageFileSize": 3119
+    },
+    {
+      "name": "Group_02_2024-01-15_14-15",
+      "fileCount": 5,
+      "timeSpan": {
+        "start": "2024-01-15T14:15:00.000Z",
+        "end": "2024-01-15T14:25:00.000Z",
+        "durationMinutes": 10
+      },
+      "cameras": [
+        "Unknown"
+      ],
+      "hasLocation": false,
+      "averageFileSize": 3119.2
+    },
+    {
+      "name": "Group_03_2024-01-15_18-45",
+      "fileCount": 7,
+      "timeSpan": {
+        "start": "2024-01-15T18:45:00.000Z",
+        "end": "2024-01-15T18:57:00.000Z",
+        "durationMinutes": 12
+      },
+      "cameras": [
+        "Unknown"
+      ],
+      "hasLocation": false,
+      "averageFileSize": 3119.285714285714
+    }
+  ],
+  "statistics": {
+    "groupSizeDistribution": {
+      "1-5": 2,
+      "6-15": 1,
+      "16-30": 0,
+      "31-50": 0,
+      "50+": 0
+    },
+    "timeSpanDistribution": {
+      "0-15min": 3,
+      "16-60min": 0,
+      "1-4hrs": 0,
+      "4+ hrs": 0
+    },
+    "cameraDistribution": {
+      "Unknown": 3
+    }
+  }
+}

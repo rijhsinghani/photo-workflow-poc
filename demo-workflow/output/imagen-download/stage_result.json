@@ -1,0 +1,14 @@
+{
+  "stage": "imagen-download",
+  "workflowId": "dbd9236f-bf4c-4dd6-9f6c-46a13f184c35",
+  "timestamp": "2025-08-27T23:13:18.694Z",
+  "success": true,
+  "tasksProcessed": 0,
+  "filesDownloaded": 0,
+  "completedTasks": [],
+  "pendingTasks": [],
+  "failedTasks": [],
+  "errors": [],
+  "mockMode": true,
+  "duration": 2000
+}

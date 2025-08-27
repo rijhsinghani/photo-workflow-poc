@@ -1,0 +1,10 @@
+{
+  "stage": "finalize",
+  "completedAt": "2025-08-27T23:13:19.218Z",
+  "workflowId": "dbd9236f-bf4c-4dd6-9f6c-46a13f184c35",
+  "result": {
+    "success": false,
+    "filesProcessed": 0,
+    "duration": 1
+  }
+}

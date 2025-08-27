@@ -1,0 +1,10 @@
+{
+  "stage": "convert",
+  "completedAt": "2025-08-27T22:43:33.586Z",
+  "workflowId": "d2363b29-acc5-4d06-8bb1-577817836f0d",
+  "result": {
+    "success": true,
+    "filesProcessed": 6,
+    "duration": 646
+  }
+}
