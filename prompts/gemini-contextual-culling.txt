@@ -28,8 +28,9 @@ Flag critical issues that would prevent delivery:
 - Camera errors or corrupted files
 
 SELECTION TARGETS:
-- Full wedding: 30-40% keeper rate
-- Portrait session: 40-50% keeper rate
+- Target keeper rate: 50% (select half, cull half)
+- Focus on removing: duplicates, blurry, out of focus, awkward expressions
+- Keep: sharp, well-composed, good expressions, unique moments
 - Small test sets (<10 images): Keep best that meet quality standards
 
 IMPORTANT: Since you're seeing ALL images together, make RELATIVE decisions:

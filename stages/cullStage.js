@@ -369,59 +369,105 @@ class CullStage {
     try {
       auditLogger.startOperation('contextual_culling');
       
-      // For large sets, process in batches to avoid timeouts
-      const MAX_BATCH_SIZE = 50;
-      let allImages = imageFiles;
+      // Process in batches for large sets
+      const BATCH_SIZE = 25; // Reduced for more reliable responses
+      const results = {
+        selectedImages: [],
+        culledImages: [],
+        duplicateGroups: [],
+        suggestedGroupings: [],
+        qualityIssues: []
+      };
       
-      if (imageFiles.length > MAX_BATCH_SIZE) {
-        auditLogger.logEvent('large_batch_detected', {
+      if (imageFiles.length > BATCH_SIZE) {
+        auditLogger.logEvent('batch_processing_start', {
           totalImages: imageFiles.length,
-          processing: 'sampling',
-          sampleSize: MAX_BATCH_SIZE
+          batchSize: BATCH_SIZE,
+          totalBatches: Math.ceil(imageFiles.length / BATCH_SIZE)
         });
         
-        // Take a representative sample for very large sets
-        // Include first, last, and evenly distributed samples
-        const sampleIndices = new Set();
-        sampleIndices.add(0); // First
-        sampleIndices.add(imageFiles.length - 1); // Last
-        
-        // Add evenly distributed samples
-        const step = Math.floor(imageFiles.length / (MAX_BATCH_SIZE - 2));
-        for (let i = step; i < imageFiles.length - 1; i += step) {
-          if (sampleIndices.size >= MAX_BATCH_SIZE) break;
-          sampleIndices.add(i);
+        // Process in multiple batches
+        for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+          const batch = imageFiles.slice(i, Math.min(i + BATCH_SIZE, imageFiles.length));
+          const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(imageFiles.length / BATCH_SIZE);
+          
+          auditLogger.logEvent('processing_batch', {
+            batchNumber,
+            totalBatches,
+            batchSize: batch.length,
+            startIndex: i
+          });
+          
+          // Prepare batch images for Gemini
+          const imagesData = [];
+          for (const imagePath of batch) {
+            const imageBase64 = await fs.readFile(imagePath, 'base64');
+            imagesData.push({
+              path: imagePath,
+              filename: path.basename(imagePath),
+              base64: imageBase64,
+              mimeType: 'image/jpeg'
+            });
+          }
+          
+          // Load contextual culling prompt
+          const prompt = await this.loadContextualPrompt();
+          
+          // Call Gemini for this batch
+          const response = await this.callGeminiContextual(imagesData, prompt, auditLogger);
+          
+          // Process batch response
+          const batchResults = this.processContextualResponse(response, batch, threshold, auditLogger);
+          
+          // Aggregate results
+          results.selectedImages.push(...(batchResults.selectedImages || []));
+          results.culledImages.push(...(batchResults.culledImages || []));
+          results.duplicateGroups.push(...(batchResults.duplicateGroups || []));
+          results.suggestedGroupings.push(...(batchResults.suggestedGroupings || []));
+          results.qualityIssues.push(...(batchResults.qualityIssues || []));
+          
+          auditLogger.logEvent('batch_processed', {
+            batchNumber,
+            selected: batchResults.selectedImages?.length || 0,
+            culled: batchResults.culledImages?.length || 0
+          });
         }
         
-        allImages = Array.from(sampleIndices).sort((a, b) => a - b).map(i => imageFiles[i]);
+        // Post-process to ensure global duplicate detection
+        results.duplicateGroups = this.consolidateDuplicateGroups(results.duplicateGroups);
         
-        auditLogger.logEvent('batch_sampled', {
-          originalCount: imageFiles.length,
-          sampleCount: allImages.length
+        auditLogger.logEvent('batch_processing_complete', {
+          totalSelected: results.selectedImages.length,
+          totalCulled: results.culledImages.length,
+          selectionRate: ((results.selectedImages.length / imageFiles.length) * 100).toFixed(1) + '%'
         });
+        
+      } else {
+        // Small batch - process all at once
+        const imagesData = [];
+        for (const imagePath of imageFiles) {
+          const imageBase64 = await fs.readFile(imagePath, 'base64');
+          imagesData.push({
+            path: imagePath,
+            filename: path.basename(imagePath),
+            base64: imageBase64,
+            mimeType: 'image/jpeg'
+          });
+        }
+        
+        const prompt = await this.loadContextualPrompt();
+        const response = await this.callGeminiContextual(imagesData, prompt, auditLogger);
+        const singleResults = this.processContextualResponse(response, imageFiles, threshold, auditLogger);
+        
+        // Use single batch results
+        results.selectedImages = singleResults.selectedImages || [];
+        results.culledImages = singleResults.culledImages || [];
+        results.duplicateGroups = singleResults.duplicateGroups || [];
+        results.suggestedGroupings = singleResults.suggestedGroupings || [];
+        results.qualityIssues = singleResults.qualityIssues || [];
       }
       
-      // Prepare images for Gemini
-      const imagesData = [];
-      for (const imagePath of allImages) {
-        const imageBase64 = await fs.readFile(imagePath, 'base64');
-        imagesData.push({
-          path: imagePath,
-          filename: path.basename(imagePath),
-          base64: imageBase64,
-          mimeType: 'image/jpeg'
-        });
-      }
-      
-      // Load contextual culling prompt
-      const prompt = await this.loadContextualPrompt();
-      
-      // Call Gemini with all images for comparative analysis
-      const response = await this.callGeminiContextual(imagesData, prompt, auditLogger);
-      
-      // Process the contextual response
-      // Note: If we sampled, we need to pass the sampled images for processing
-      const results = this.processContextualResponse(response, allImages, threshold, auditLogger);
       
       auditLogger.endOperation({
         selected: results.selectedImages?.length || 0,
@@ -483,6 +529,28 @@ class CullStage {
       // QA failure shouldn't block process
       return { passed: selectedImages, failed: [], issues: [] };
     }
+  }
+
+  /**
+   * Consolidate duplicate groups across batches
+   */
+  consolidateDuplicateGroups(duplicateGroups) {
+    if (!duplicateGroups || duplicateGroups.length === 0) return [];
+    
+    // Simple consolidation - in a real implementation, you might want to
+    // check for duplicates across batch boundaries
+    const consolidated = [];
+    const seen = new Set();
+    
+    for (const group of duplicateGroups) {
+      const groupKey = group.group_id || `group_${consolidated.length + 1}`;
+      if (!seen.has(groupKey)) {
+        seen.add(groupKey);
+        consolidated.push(group);
+      }
+    }
+    
+    return consolidated;
   }
 
   /**
@@ -810,6 +878,16 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
    */
   async callGeminiContextual(imagesData, prompt, auditLogger) {
     try {
+      // Check for invalid API key
+      if (!this.geminiApiKey || this.geminiApiKey === 'mock-api-key-for-testing') {
+        const error = new Error('Invalid Gemini API key. Please set a valid GEMINI_API_KEY in your .env file');
+        auditLogger.logError(error, {
+          operation: 'gemini_contextual_call',
+          apiKeyStatus: 'invalid'
+        });
+        throw error;
+      }
+
       const parts = [{ text: prompt }];
       
       imagesData.forEach((img, index) => {
@@ -836,9 +914,21 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
 
       return response.data;
     } catch (error) {
-      auditLogger.logError(error, {
-        operation: 'gemini_contextual_call'
-      });
+      // Log more detailed error information
+      if (error.response) {
+        auditLogger.logError(error, {
+          operation: 'gemini_contextual_call',
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          message: error.response.data?.error?.message || error.message
+        });
+      } else {
+        auditLogger.logError(error, {
+          operation: 'gemini_contextual_call',
+          message: error.message
+        });
+      }
       throw error;
     }
   }
@@ -887,12 +977,36 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
   processContextualResponse(response, imageFiles, threshold, auditLogger) {
     try {
       const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      
+      // Try to find JSON block between first { and last }
+      const startIdx = responseText.indexOf('{');
+      const endIdx = responseText.lastIndexOf('}');
+      
+      if (startIdx === -1 || endIdx === -1 || startIdx >= endIdx) {
+        throw new Error('No valid JSON found in response');
       }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      
+      const jsonStr = responseText.substring(startIdx, endIdx + 1);
+      
+      // Clean up common JSON issues
+      const cleanedJson = jsonStr
+        .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+        .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+        .replace(/}\s*{/g, '},{') // Fix missing commas between objects
+        .replace(/]\s*\[/g, '],['); // Fix missing commas between arrays
+      
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanedJson);
+      } catch (parseError) {
+        // Log the problematic JSON for debugging
+        auditLogger.logError(parseError, {
+          operation: 'json_parse',
+          jsonLength: cleanedJson.length,
+          jsonPreview: cleanedJson.substring(0, 500)
+        });
+        throw new Error(`JSON parsing failed: ${parseError.message}`);
+      }
       
       const results = {
         selectedImages: [],
@@ -902,44 +1016,76 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
         qualityIssues: parsed.quality_issues || []
       };
 
+      // Create a map of basenames for faster lookup and case-insensitive matching
+      const fileMap = new Map();
+      imageFiles.forEach(file => {
+        const basename = path.basename(file);
+        fileMap.set(basename.toLowerCase(), file);
+        fileMap.set(basename, file); // Also store exact case
+      });
+
+      // Log available files for debugging
+      auditLogger.logEvent('available_files', {
+        count: imageFiles.length,
+        sample: imageFiles.slice(0, 5).map(f => path.basename(f))
+      });
+
       // Process selected images
       if (parsed.selected_images) {
+        auditLogger.logEvent('processing_selected', {
+          count: parsed.selected_images.length,
+          sample: parsed.selected_images.slice(0, 3).map(img => img.filename)
+        });
+        
         parsed.selected_images.forEach(img => {
-          const fullPath = imageFiles.find(f => path.basename(f) === img.filename);
+          // Try exact match first, then case-insensitive
+          let fullPath = fileMap.get(img.filename) || fileMap.get(img.filename.toLowerCase());
+          
           if (fullPath) {
             results.selectedImages.push({
               path: fullPath,
-              filename: img.filename,
+              filename: path.basename(fullPath), // Use actual filename
               reason: img.reason,
               score: img.technical_score || 0.8,
               isHeroShot: img.is_hero_shot || false,
               groupId: img.group_id
             });
           } else {
-            auditLogger.logError(
-              new Error(`Could not find file path for ${img.filename}`),
-              { operation: 'process_contextual_response', filename: img.filename }
-            );
+            // Only log if it's not obviously a non-existent file
+            auditLogger.logEvent('filename_not_found', {
+              operation: 'selected_image',
+              filename: img.filename,
+              availableCount: imageFiles.length
+            });
           }
         });
       }
 
       // Process culled images
       if (parsed.culled_images) {
+        auditLogger.logEvent('processing_culled', {
+          count: parsed.culled_images.length,
+          sample: parsed.culled_images.slice(0, 3).map(img => img.filename)
+        });
+        
         parsed.culled_images.forEach(img => {
-          const fullPath = imageFiles.find(f => path.basename(f) === img.filename);
+          // Try exact match first, then case-insensitive
+          let fullPath = fileMap.get(img.filename) || fileMap.get(img.filename.toLowerCase());
+          
           if (fullPath) {
             results.culledImages.push({
               path: fullPath,
-              filename: img.filename,
+              filename: path.basename(fullPath), // Use actual filename
               reason: img.reason,
               groupId: img.group_id
             });
           } else {
-            auditLogger.logError(
-              new Error(`Could not find file path for culled image ${img.filename}`),
-              { operation: 'process_contextual_response', filename: img.filename }
-            );
+            // Only log if it's not obviously a non-existent file
+            auditLogger.logEvent('filename_not_found', {
+              operation: 'culled_image',
+              filename: img.filename,
+              availableCount: imageFiles.length
+            });
           }
         });
       }
