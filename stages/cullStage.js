@@ -14,8 +14,9 @@ class CullStage {
   constructor(options = {}) {
     this.auditLogger = options.auditLogger;
     this.geminiApiKey = process.env.GEMINI_API_KEY;
-    this.batchSize = 5; // Process images in batches
-    this.supportedFormats = ['.jpg', '.jpeg', '.png', '.tiff', '.tif'];
+    this.supportedFormats = ['.jpg', '.jpeg']; // Only JPEG from Stage 1
+    this.enableQACheck = options.enableQACheck !== false; // Default true
+    this.targetKeeperRate = options.targetKeeperRate || 0.4; // 40% default
   }
 
   /**
@@ -28,6 +29,11 @@ class CullStage {
     // Configuration
     const threshold = parseFloat(options.threshold) || 0.7; // 0-1 rating threshold
     
+    // Validate threshold
+    if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+      throw new Error(`Invalid threshold value: ${options.threshold}. Threshold must be between 0 and 1.`);
+    }
+    
     auditLogger.logEvent('cull_stage_start', {
       inputPath,
       outputPath,
@@ -37,15 +43,14 @@ class CullStage {
     });
 
     try {
-      // Check API key
+      // Check API key - required for operation
       if (!this.geminiApiKey) {
-        auditLogger.logFallback('ai_culling',
-          'gemini_api', 'basic_filtering',
-          'Gemini API key not available, using basic file filtering',
-          true
-        );
-        
-        return await this.basicFiltering(inputPath, outputPath, options);
+        const error = new Error('Gemini API key is required. Set GEMINI_API_KEY environment variable.');
+        auditLogger.logError(error, {
+          operation: 'api_key_check',
+          suggestion: 'Set GEMINI_API_KEY in .env file'
+        }, 'critical');
+        throw error;
       }
 
       // Find all image files
@@ -71,54 +76,57 @@ class CullStage {
         };
       }
 
-      // Process images in batches
-      const results = {
-        success: true,
-        filesProcessed: 0,
-        filesSelected: 0,
-        errors: [],
-        ratings: [],
-        selectedFiles: [],
-        duration: 0
-      };
+      // PASS 1: Contextual Gallery Curation
+      auditLogger.logEvent('contextual_culling_start', {
+        totalImages: imageFiles.length,
+        targetKeeperRate: this.targetKeeperRate
+      });
 
-      const batches = this.createBatches(imageFiles, this.batchSize);
-      
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        
-        auditLogger.logEvent('batch_processing', {
-          batch: i + 1,
-          totalBatches: batches.length,
-          batchSize: batch.length
+      const curationResults = await this.performContextualCulling(imageFiles, {
+        auditLogger,
+        threshold,
+        dryRun
+      });
+
+      // PASS 2: Quality Assurance Check (if enabled)
+      let finalResults = curationResults;
+      if (this.enableQACheck && curationResults.selectedImages?.length > 0) {
+        auditLogger.logEvent('qa_check_start', {
+          imagesToCheck: curationResults.selectedImages.length
         });
 
-        try {
-          const batchResults = await this.processBatch(batch, threshold, {
-            auditLogger,
-            dryRun
-          });
-          
-          results.filesProcessed += batchResults.filesProcessed;
-          results.filesSelected += batchResults.filesSelected;
-          results.ratings.push(...batchResults.ratings);
-          results.selectedFiles.push(...batchResults.selectedFiles);
-          results.errors.push(...batchResults.errors);
-          
-        } catch (error) {
-          auditLogger.logError(error, {
-            batch: i + 1,
-            batchFiles: batch,
-            operation: 'batch_processing'
-          });
-          
-          results.errors.push({
-            batch: i + 1,
-            error: error.message,
-            files: batch
-          });
-        }
+        const qaResults = await this.performQACheck(curationResults.selectedImages, {
+          auditLogger,
+          dryRun
+        });
+
+        // Merge QA results with curation results
+        finalResults = this.mergeQAResults(curationResults, qaResults, auditLogger);
       }
+
+      // Prepare final results structure
+      // Map selectedImages to the format expected by copySelectedFiles
+      const selectedFiles = (finalResults.selectedImages || []).map(img => ({
+        file: img.path || path.join(inputPath, img.filename),
+        filename: img.filename,
+        rating: img.technical_score || img.score || 0.8,
+        reasoning: img.reason
+      }));
+      
+      const results = {
+        success: true,
+        filesProcessed: imageFiles.length,
+        filesSelected: finalResults.selectedImages?.length || 0,
+        duplicateGroups: finalResults.duplicateGroups || [],
+        qualityIssues: finalResults.qualityIssues || [],
+        selectedFiles: selectedFiles,
+        culledFiles: finalResults.culledImages || [],
+        suggestedGroupings: finalResults.suggestedGroupings || [],
+        groupingWarnings: finalResults.groupingWarnings || [],
+        ratings: selectedFiles,  // For compatibility with report generation
+        errors: [],
+        duration: 0
+      };
 
       // Copy selected files to output directory
       if (!dryRun && results.selectedFiles.length > 0) {
@@ -133,6 +141,9 @@ class CullStage {
         filesProcessed: results.filesProcessed,
         filesSelected: results.filesSelected,
         selectionRate: ((results.filesSelected / results.filesProcessed) * 100).toFixed(2) + '%',
+        duplicateGroups: results.duplicateGroups?.length || 0,
+        qualityIssues: results.qualityIssues?.length || 0,
+        suggestedGroupings: results.suggestedGroupings?.length || 0,
         errors: results.errors.length,
         duration: results.duration,
         threshold
@@ -347,6 +358,168 @@ class CullStage {
 
       return this.getBasicRating(imageFile);
     }
+  }
+
+  /**
+   * Perform contextual culling on all images together
+   */
+  async performContextualCulling(imageFiles, options) {
+    const { auditLogger, threshold, dryRun } = options;
+    
+    try {
+      auditLogger.startOperation('contextual_culling');
+      
+      // For large sets, process in batches to avoid timeouts
+      const MAX_BATCH_SIZE = 50;
+      let allImages = imageFiles;
+      
+      if (imageFiles.length > MAX_BATCH_SIZE) {
+        auditLogger.logEvent('large_batch_detected', {
+          totalImages: imageFiles.length,
+          processing: 'sampling',
+          sampleSize: MAX_BATCH_SIZE
+        });
+        
+        // Take a representative sample for very large sets
+        // Include first, last, and evenly distributed samples
+        const sampleIndices = new Set();
+        sampleIndices.add(0); // First
+        sampleIndices.add(imageFiles.length - 1); // Last
+        
+        // Add evenly distributed samples
+        const step = Math.floor(imageFiles.length / (MAX_BATCH_SIZE - 2));
+        for (let i = step; i < imageFiles.length - 1; i += step) {
+          if (sampleIndices.size >= MAX_BATCH_SIZE) break;
+          sampleIndices.add(i);
+        }
+        
+        allImages = Array.from(sampleIndices).sort((a, b) => a - b).map(i => imageFiles[i]);
+        
+        auditLogger.logEvent('batch_sampled', {
+          originalCount: imageFiles.length,
+          sampleCount: allImages.length
+        });
+      }
+      
+      // Prepare images for Gemini
+      const imagesData = [];
+      for (const imagePath of allImages) {
+        const imageBase64 = await fs.readFile(imagePath, 'base64');
+        imagesData.push({
+          path: imagePath,
+          filename: path.basename(imagePath),
+          base64: imageBase64,
+          mimeType: 'image/jpeg'
+        });
+      }
+      
+      // Load contextual culling prompt
+      const prompt = await this.loadContextualPrompt();
+      
+      // Call Gemini with all images for comparative analysis
+      const response = await this.callGeminiContextual(imagesData, prompt, auditLogger);
+      
+      // Process the contextual response
+      // Note: If we sampled, we need to pass the sampled images for processing
+      const results = this.processContextualResponse(response, allImages, threshold, auditLogger);
+      
+      auditLogger.endOperation({
+        selected: results.selectedImages?.length || 0,
+        culled: results.culledImages?.length || 0,
+        duplicateGroups: results.duplicateGroups?.length || 0
+      });
+      
+      return results;
+    } catch (error) {
+      auditLogger.logError(error, { operation: 'contextual_culling' });
+      throw error;
+    }
+  }
+
+  /**
+   * Perform QA check on selected images
+   */
+  async performQACheck(selectedImages, options) {
+    const { auditLogger, dryRun } = options;
+    
+    try {
+      if (!selectedImages || selectedImages.length === 0) {
+        return { passed: [], failed: [], issues: [] };
+      }
+      
+      auditLogger.startOperation('qa_check');
+      
+      // Prepare selected images for QA
+      const imagesData = [];
+      for (const image of selectedImages) {
+        const imagePath = image.path || image.filename;
+        const imageBase64 = await fs.readFile(imagePath, 'base64');
+        imagesData.push({
+          path: imagePath,
+          filename: path.basename(imagePath),
+          base64: imageBase64,
+          mimeType: 'image/jpeg'
+        });
+      }
+      
+      // Load QA prompt
+      const qaPrompt = await this.loadQAPrompt();
+      
+      // Call Gemini for QA check
+      const response = await this.callGeminiQA(imagesData, qaPrompt, auditLogger);
+      
+      // Process QA results
+      const qaResults = this.processQAResponse(response, selectedImages, auditLogger);
+      
+      auditLogger.endOperation({
+        passed: qaResults.passed?.length || 0,
+        failed: qaResults.failed?.length || 0,
+        issues: qaResults.issues?.length || 0
+      });
+      
+      return qaResults;
+    } catch (error) {
+      auditLogger.logError(error, { operation: 'qa_check' });
+      // QA failure shouldn't block process
+      return { passed: selectedImages, failed: [], issues: [] };
+    }
+  }
+
+  /**
+   * Merge QA results with curation results
+   */
+  mergeQAResults(curationResults, qaResults, auditLogger) {
+    const finalResults = { ...curationResults };
+    
+    // Remove images that failed QA
+    if (qaResults.failed && qaResults.failed.length > 0) {
+      const failedPaths = qaResults.failed.map(f => f.path || f.filename);
+      finalResults.selectedImages = curationResults.selectedImages.filter(
+        img => !failedPaths.includes(img.path || img.filename)
+      );
+      
+      // Move failed images to culled with QA reason
+      qaResults.failed.forEach(failedImage => {
+        finalResults.culledImages.push({
+          ...failedImage,
+          reason: `QA Failed: ${failedImage.reason || 'Technical issues detected'}`
+        });
+      });
+      
+      auditLogger.logEvent('qa_results_merged', {
+        originalSelected: curationResults.selectedImages.length,
+        afterQA: finalResults.selectedImages.length,
+        removedByQA: qaResults.failed.length
+      });
+    }
+    
+    // Add quality issues to results
+    finalResults.qualityIssues = qaResults.issues || [];
+    
+    // Add grouping warnings to results
+    finalResults.groupingWarnings = qaResults.groupingWarnings || [];
+    
+    return finalResults;
   }
 
   /**
@@ -581,12 +754,13 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
   getMimeType(ext) {
     const mimeTypes = {
       '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.tiff': 'image/tiff',
-      '.tif': 'image/tiff'
+      '.jpeg': 'image/jpeg'
     };
-    return mimeTypes[ext.toLowerCase()] || 'image/jpeg';
+    const mimeType = mimeTypes[ext.toLowerCase()];
+    if (!mimeType) {
+      throw new Error(`Unsupported file extension: ${ext}. Only JPEG files are supported.`);
+    }
+    return mimeType;
   }
 
   /**
@@ -602,6 +776,261 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
   }
 
   /**
+   * Load contextual culling prompt
+   */
+  async loadContextualPrompt() {
+    try {
+      const promptPath = path.join(__dirname, '..', 'prompts', 'gemini-contextual-culling.txt');
+      const prompt = await fs.readFile(promptPath, 'utf-8');
+      this.auditLogger?.logEvent('prompt_loaded', {
+        source: 'contextual_culling',
+        promptPath: 'gemini-contextual-culling.txt'
+      });
+      return prompt;
+    } catch (error) {
+      return this.getDefaultContextualPrompt();
+    }
+  }
+
+  /**
+   * Load QA check prompt
+   */
+  async loadQAPrompt() {
+    try {
+      const promptPath = path.join(__dirname, '..', 'prompts', 'gemini-qa-check.txt');
+      const prompt = await fs.readFile(promptPath, 'utf-8');
+      return prompt;
+    } catch (error) {
+      return this.getDefaultQAPrompt();
+    }
+  }
+
+  /**
+   * Call Gemini for contextual analysis
+   */
+  async callGeminiContextual(imagesData, prompt, auditLogger) {
+    try {
+      const parts = [{ text: prompt }];
+      
+      imagesData.forEach((img, index) => {
+        parts.push({
+          text: `\nImage ${index + 1}: ${img.filename}`
+        });
+        parts.push({
+          inline_data: {
+            mime_type: img.mimeType,
+            data: img.base64
+          }
+        });
+      });
+
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
+        {
+          contents: [{
+            parts
+          }]
+        },
+        { timeout: 120000 }
+      );
+
+      return response.data;
+    } catch (error) {
+      auditLogger.logError(error, {
+        operation: 'gemini_contextual_call'
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Call Gemini for QA check
+   */
+  async callGeminiQA(imagesData, prompt, auditLogger) {
+    try {
+      const parts = [{ text: prompt }];
+      
+      imagesData.forEach((img, index) => {
+        parts.push({
+          text: `\nImage ${index + 1}: ${img.filename}`
+        });
+        parts.push({
+          inline_data: {
+            mime_type: img.mimeType,
+            data: img.base64
+          }
+        });
+      });
+
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
+        {
+          contents: [{
+            parts
+          }]
+        },
+        { timeout: 30000 }
+      );
+
+      return response.data;
+    } catch (error) {
+      auditLogger.logError(error, {
+        operation: 'gemini_qa_call'
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Process contextual culling response
+   */
+  processContextualResponse(response, imageFiles, threshold, auditLogger) {
+    try {
+      const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      const results = {
+        selectedImages: [],
+        culledImages: [],
+        duplicateGroups: parsed.duplicate_groups || [],
+        suggestedGroupings: parsed.suggested_groupings || [],
+        qualityIssues: parsed.quality_issues || []
+      };
+
+      // Process selected images
+      if (parsed.selected_images) {
+        parsed.selected_images.forEach(img => {
+          const fullPath = imageFiles.find(f => path.basename(f) === img.filename);
+          if (fullPath) {
+            results.selectedImages.push({
+              path: fullPath,
+              filename: img.filename,
+              reason: img.reason,
+              score: img.technical_score || 0.8,
+              isHeroShot: img.is_hero_shot || false,
+              groupId: img.group_id
+            });
+          } else {
+            auditLogger.logError(
+              new Error(`Could not find file path for ${img.filename}`),
+              { operation: 'process_contextual_response', filename: img.filename }
+            );
+          }
+        });
+      }
+
+      // Process culled images
+      if (parsed.culled_images) {
+        parsed.culled_images.forEach(img => {
+          const fullPath = imageFiles.find(f => path.basename(f) === img.filename);
+          if (fullPath) {
+            results.culledImages.push({
+              path: fullPath,
+              filename: img.filename,
+              reason: img.reason,
+              groupId: img.group_id
+            });
+          } else {
+            auditLogger.logError(
+              new Error(`Could not find file path for culled image ${img.filename}`),
+              { operation: 'process_contextual_response', filename: img.filename }
+            );
+          }
+        });
+      }
+
+      return results;
+    } catch (error) {
+      auditLogger.logError(error, {
+        operation: 'process_contextual_response'
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Process QA response
+   */
+  processQAResponse(response, selectedImages, auditLogger) {
+    try {
+      const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in QA response');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      const results = { 
+        passed: [], 
+        failed: [], 
+        issues: [],
+        groupingWarnings: parsed.grouping_warnings || []
+      };
+
+      if (parsed.qa_results) {
+        parsed.qa_results.forEach(qaResult => {
+          const image = selectedImages.find(img => 
+            path.basename(img.path || img.filename) === qaResult.filename
+          );
+          
+          if (image) {
+            if (qaResult.passed_qa) {
+              results.passed.push(image);
+            } else {
+              results.failed.push({
+                ...image,
+                reason: qaResult.notes || 'Failed QA check',
+                issues: qaResult.issues
+              });
+            }
+            
+            if (qaResult.issues && qaResult.issues.length > 0) {
+              results.issues.push({
+                filename: qaResult.filename,
+                issues: qaResult.issues
+              });
+            }
+          }
+        });
+      }
+
+      // Log grouping warnings if present
+      if (results.groupingWarnings.length > 0) {
+        auditLogger.logEvent('grouping_warnings_detected', {
+          count: results.groupingWarnings.length,
+          warnings: results.groupingWarnings
+        });
+      }
+
+      return results;
+    } catch (error) {
+      auditLogger.logError(error, {
+        operation: 'process_qa_response'
+      });
+      return { passed: selectedImages, failed: [], issues: [], groupingWarnings: [] };
+    }
+  }
+
+  /**
+   * Get default contextual prompt
+   */
+  getDefaultContextualPrompt() {
+    return `Review all images together and select the best, avoiding duplicates.`;
+  }
+
+  /**
+   * Get default QA prompt
+   */
+  getDefaultQAPrompt() {
+    return `Check images for technical quality issues.`;
+  }
+
+  /**
    * Create culling report
    */
   async createCullingReport(outputPath, results, originalFiles, threshold) {
@@ -614,6 +1043,10 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
         filesSelected: results.filesSelected,
         selectionRate: ((results.filesSelected / results.filesProcessed) * 100).toFixed(2) + '%',
         threshold,
+        duplicateGroups: results.duplicateGroups?.length || 0,
+        qualityIssues: results.qualityIssues?.length || 0,
+        suggestedGroupings: results.suggestedGroupings?.length || 0,
+        groupingWarnings: results.groupingWarnings?.length || 0,
         errors: results.errors.length,
         duration: results.duration,
         method: results.method || 'gemini_ai'
@@ -624,6 +1057,10 @@ Be critical but fair. A score of 0.7+ indicates the photo should be kept for the
         rating: f.rating,
         reasoning: f.reasoning
       })) || [],
+      duplicateGroups: results.duplicateGroups || [],
+      qualityIssues: results.qualityIssues || [],
+      suggestedGroupings: results.suggestedGroupings || [],
+      groupingWarnings: results.groupingWarnings || [],
       errors: results.errors
     };
 

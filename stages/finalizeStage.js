@@ -9,7 +9,6 @@ const fs = require('fs-extra');
 const path = require('path');
 const xml2js = require('xml2js');
 const exifr = require('exifr');
-const sharp = require('sharp');
 const { glob } = require('glob');
 
 class FinalizeStage {
@@ -284,14 +283,20 @@ class FinalizeStage {
       
       // Get enhanced image info
       const enhancedStats = await fs.stat(enhancedImagePath);
-      const enhancedMeta = await sharp(enhancedImagePath).metadata();
+      
+      // Get dimensions from EXIF if available
+      const enhancedExif = await exifr.parse(enhancedImagePath, {
+        pick: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight']
+      });
+      const width = enhancedExif?.ImageWidth || enhancedExif?.ExifImageWidth || 'unknown';
+      const height = enhancedExif?.ImageHeight || enhancedExif?.ExifImageHeight || 'unknown';
       
       auditLogger.logEvent('image_analysis', {
         fileName,
         enhancedSize: enhancedStats.size,
-        dimensions: `${enhancedMeta.width}x${enhancedMeta.height}`,
+        dimensions: `${width}x${height}`,
         hasOriginalMetadata: !!originalMetadata,
-        format: enhancedMeta.format
+        format: path.extname(enhancedImagePath).toLowerCase().slice(1)
       });
 
       if (dryRun) {
@@ -357,61 +362,54 @@ class FinalizeStage {
 
   /**
    * Create different output versions of the image
+   * Without Sharp, we'll organize files into folders
    */
   async createOutputVersions(enhancedImagePath, outputPath, originalMetadata, auditLogger) {
     const fileName = path.parse(enhancedImagePath).name;
+    const ext = path.extname(enhancedImagePath);
     const outputFiles = [];
     
     try {
-      const sharpImage = sharp(enhancedImagePath);
-      
-      // High-resolution version (original size)
-      const highResPath = path.join(outputPath, 'high-resolution', `${fileName}.jpg`);
-      await sharpImage
-        .clone()
-        .jpeg({ quality: 95, progressive: true })
-        .toFile(highResPath);
+      // High-resolution version (original file)
+      const highResDir = path.join(outputPath, 'high-resolution');
+      await fs.ensureDir(highResDir);
+      const highResPath = path.join(highResDir, `${fileName}${ext}`);
+      await fs.copy(enhancedImagePath, highResPath);
       
       outputFiles.push({
         type: 'high-resolution',
         path: highResPath,
-        quality: 95
+        note: 'Original enhanced image'
       });
       
-      // Web-optimized version (max 2048px wide)
-      const webPath = path.join(outputPath, 'web-optimized', `${fileName}_web.jpg`);
-      await sharpImage
-        .clone()
-        .resize(2048, 2048, { 
-          fit: 'inside', 
-          withoutEnlargement: true 
-        })
-        .jpeg({ quality: 85, progressive: true })
-        .toFile(webPath);
+      // Web-optimized version (copy for now, could be processed with imagemagick later)
+      const webDir = path.join(outputPath, 'web-optimized');
+      await fs.ensureDir(webDir);
+      const webPath = path.join(webDir, `${fileName}_web${ext}`);
+      await fs.copy(enhancedImagePath, webPath);
       
       outputFiles.push({
         type: 'web-optimized',
         path: webPath,
-        quality: 85,
-        maxDimension: 2048
+        note: 'Web-ready version (full resolution)'
       });
       
-      // Thumbnail version (300px wide)
-      const thumbPath = path.join(outputPath, 'thumbnails', `${fileName}_thumb.jpg`);
-      await sharpImage
-        .clone()
-        .resize(300, 300, { 
-          fit: 'inside', 
-          withoutEnlargement: true 
-        })
-        .jpeg({ quality: 80 })
-        .toFile(thumbPath);
+      // Thumbnail version (symlink or copy)
+      const thumbDir = path.join(outputPath, 'thumbnails');
+      await fs.ensureDir(thumbDir);
+      const thumbPath = path.join(thumbDir, `${fileName}_thumb${ext}`);
+      
+      // Try to create symlink, fall back to copy
+      try {
+        await fs.symlink(enhancedImagePath, thumbPath);
+      } catch {
+        await fs.copy(enhancedImagePath, thumbPath);
+      }
       
       outputFiles.push({
         type: 'thumbnail',
         path: thumbPath,
-        quality: 80,
-        maxDimension: 300
+        note: 'Preview thumbnail'
       });
       
       auditLogger.logEvent('output_versions_created', {

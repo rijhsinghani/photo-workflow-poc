@@ -1,22 +1,22 @@
 /**
- * Convert Stage - RAW to JPEG conversion with metadata preservation
+ * Convert Stage - Simplified RAW to JPEG conversion using only dcraw
  * 
- * Converts RAW files (ARW, CR2, NEF, etc.) to high-quality JPEG
- * while preserving EXIF metadata and applying basic corrections.
+ * Removed Sharp dependency since it doesn't support Sony ARW files.
+ * Uses dcraw for all RAW conversions with metadata preservation.
  */
 
 const fs = require('fs-extra');
 const path = require('path');
-const sharp = require('sharp');
-const exifr = require('exifr');
 const { glob } = require('glob');
 const MetadataPreserver = require('../lib/metadataPreserver');
+const DcrawConverter = require('../lib/dcrawConverter');
 
 class ConvertStage {
   constructor(options = {}) {
     this.auditLogger = options.auditLogger;
     this.supportedFormats = ['.arw', '.cr2', '.nef', '.orf', '.dng', '.raw', '.raf'];
     this.metadataPreserver = new MetadataPreserver(this.auditLogger);
+    this.dcrawConverter = new DcrawConverter(this.auditLogger);
   }
 
   /**
@@ -40,546 +40,240 @@ class ConvertStage {
     });
 
     try {
-      // Handle mock mode
-      if (mock) {
-        return await this.mockConversionProcess(inputPath, outputPath, options, startTime);
+      // Initialize dcraw converter
+      const dcrawAvailable = await this.dcrawConverter.initialize();
+      
+      if (!dcrawAvailable && !mock) {
+        throw new Error('dcraw is not installed. Install with: brew install dcraw');
       }
 
       // Find all RAW files
       const rawFiles = await this.findRawFiles(inputPath);
       
-      auditLogger.logEvent('raw_files_found', {
-        totalFiles: rawFiles.length,
-        formats: this.getFormatStats(rawFiles)
-      });
-
       if (rawFiles.length === 0) {
-        auditLogger.logDecision('no_raw_files', 
-          { inputPath },
-          'skip_conversion',
-          'No RAW files found in input directory'
-        );
-        
+        auditLogger.logEvent('no_raw_files_found', { inputPath });
         return {
-          success: true,
           filesProcessed: 0,
-          filesSkipped: 0,
-          duration: Date.now() - startTime
+          success: true,
+          message: 'No RAW files found in input directory'
         };
       }
 
-      // Process files
-      const results = {
-        success: true,
-        filesProcessed: 0,
-        filesSkipped: 0,
-        errors: [],
-        duration: 0,
-        outputFiles: []
-      };
+      auditLogger.logEvent('raw_files_found', {
+        totalFiles: rawFiles.length,
+        formats: this.getFormatBreakdown(rawFiles)
+      });
 
+      // Ensure output directory exists
+      await fs.ensureDir(outputPath);
+
+      // Process files
+      const results = [];
+      const errors = [];
+      
       for (const rawFile of rawFiles) {
+        const fileName = path.basename(rawFile, path.extname(rawFile));
+        const jpegFile = path.join(outputPath, `${fileName}.jpg`);
+        
+        // Process this file
+        auditLogger.startOperation(`convert_${path.basename(rawFile)}`);
+        
         try {
-          const result = await this.processRawFile(rawFile, outputPath, {
-            quality,
-            resize,
-            dryRun,
-            auditLogger
-          });
-          
-          if (result.success) {
-            results.filesProcessed++;
-            results.outputFiles.push(result.outputFile);
-          } else {
-            results.filesSkipped++;
-            results.errors.push({
-              file: rawFile,
-              error: result.error
+            // Extract metadata first
+            auditLogger.logEvent('metadata_extraction_start', {
+              file: path.basename(rawFile),
+              operation: 'comprehensive_exif_read'
             });
+            
+            const metadata = await this.metadataPreserver.extractMetadata(rawFile);
+            
+            // Log extracted metadata details
+            if (metadata?.timestamps?.primary) {
+              auditLogger.logEvent('metadata_extracted_enhanced', {
+                file: path.basename(rawFile),
+                camera: metadata.full?.Make ? `${metadata.full.Make} ${metadata.full.Model}` : 'Unknown',
+                iso: metadata.full?.ISO || 'Unknown',
+                aperture: metadata.full?.FNumber || metadata.full?.ApertureValue || 'Unknown',
+                shutterSpeed: metadata.full?.ExposureTime || metadata.full?.ShutterSpeedValue || 'Unknown',
+                primaryTimestamp: metadata.timestamps.primary.value,
+                timestampFields: Object.keys(metadata.timestamps.available).length,
+                totalMetadataFields: Object.keys(metadata.full || {}).length
+              });
+            }
+
+            if (dryRun) {
+              auditLogger.logDecision('dry_run_skip', 'skip', {
+                file: rawFile,
+                wouldConvertTo: jpegFile
+              });
+              results.push({ 
+                input: rawFile, 
+                output: jpegFile, 
+                dryRun: true,
+                metadata: metadata?.timestamps?.primary
+              });
+              continue;
+            }
+
+            // Convert using dcraw
+            const conversionResult = await this.dcrawConverter.convert(
+              rawFile,
+              jpegFile,
+              { quality, resize, method: 'auto' }
+            );
+
+            // Re-embed critical EXIF metadata (especially timestamps) after dcraw conversion
+            if (metadata && metadata.timestamps) {
+              auditLogger.logEvent('preserving_timestamps', {
+                file: path.basename(jpegFile),
+                originalTimestamp: metadata.timestamps.primary?.value
+              });
+              
+              try {
+                await this.metadataPreserver.reembedMetadata(jpegFile, metadata);
+                auditLogger.logEvent('timestamps_preserved', {
+                  file: path.basename(jpegFile),
+                  success: true
+                });
+              } catch (embedError) {
+                auditLogger.logError(embedError, {
+                  operation: 'timestamp_preservation',
+                  file: path.basename(jpegFile)
+                });
+              }
+            }
+
+            // Verify metadata preservation
+            const outputMetadata = await this.metadataPreserver.extractMetadata(jpegFile);
+            const metadataPreserved = this.verifyMetadataPreservation(metadata, outputMetadata);
+
+            results.push({
+              input: rawFile,
+              output: jpegFile,
+              success: true,
+              method: conversionResult.method,
+              size: conversionResult.size,
+              metadataPreserved,
+              timestamp: metadata?.timestamps?.primary?.value
+            });
+
+            auditLogger.logEvent('file_converted', {
+              input: path.basename(rawFile),
+              output: path.basename(jpegFile),
+              method: conversionResult.method,
+              size: conversionResult.size,
+              metadataPreserved
+            });
+
+          } catch (error) {
+            errors.push({
+              file: rawFile,
+              error: error.message
+            });
+            
+            auditLogger.logError(error, `Failed to convert ${path.basename(rawFile)}`);
+            
+            // Log fallback attempts
+            auditLogger.logFallback('dcraw_conversion', 'skip_file', error.message, false);
           }
           
-        } catch (error) {
-          auditLogger.logError(error, {
-            file: rawFile,
-            operation: 'convert_single_file'
-          });
-          
-          results.errors.push({
-            file: rawFile,
-            error: error.message
-          });
-          results.filesSkipped++;
-        }
+          auditLogger.endOperation();
       }
 
-      results.duration = Date.now() - startTime;
-      
-      // Log conversion summary
+      // Generate conversion report
+      const report = {
+        stage: 'convert',
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalInputFiles: rawFiles.length,
+          filesProcessed: results.length,
+          filesSkipped: errors.length,
+          errors: errors.length,
+          duration: Date.now() - startTime,
+          averageTimePerFile: results.length > 0 ? 
+            Math.round((Date.now() - startTime) / results.length) : 0
+        },
+        fileFormats: this.getFormatBreakdown(rawFiles),
+        errors,
+        outputFiles: results,
+        metadataPreservation: {
+          filesWithMetadata: results.filter(r => r.metadataPreserved).length,
+          timestampVerificationRate: `${Math.round(
+            (results.filter(r => r.metadataPreserved).length / results.length) * 100
+          )}%`
+        }
+      };
+
+      // Save report
+      await fs.writeJson(
+        path.join(outputPath, 'conversion_report.json'),
+        report,
+        { spaces: 2 }
+      );
+
       auditLogger.logEvent('convert_stage_complete', {
         totalFiles: rawFiles.length,
-        filesProcessed: results.filesProcessed,
-        filesSkipped: results.filesSkipped,
-        errors: results.errors.length,
-        duration: results.duration,
-        averageTimePerFile: results.filesProcessed > 0 ? results.duration / results.filesProcessed : 0
+        filesProcessed: results.length,
+        filesSkipped: errors.length,
+        errors: errors.length,
+        duration: Date.now() - startTime,
+        averageTimePerFile: report.summary.averageTimePerFile
       });
 
-      // Create conversion report
-      await this.createConversionReport(outputPath, results, rawFiles);
-
-      return results;
-
-    } catch (error) {
-      auditLogger.logError(error, {
-        operation: 'convert_stage_execution',
-        inputPath,
-        outputPath
-      }, 'critical');
-      
       return {
-        success: false,
-        error: error.message,
-        filesProcessed: 0,
+        filesProcessed: results.length,
+        success: true,
         duration: Date.now() - startTime
       };
+
+    } catch (error) {
+      auditLogger.logError(error, 'Convert stage failed');
+      throw error;
     }
   }
 
   /**
-   * Find all RAW files in directory
+   * Find all RAW files in input directory
    */
   async findRawFiles(inputPath) {
-    try {
-      const patterns = this.supportedFormats.map(ext => `**/*${ext}`);
-      const allFiles = [];
-      
-      for (const pattern of patterns) {
-        const files = await glob(pattern, { 
-          cwd: inputPath, 
-          nocase: true,
-          absolute: true 
-        });
-        allFiles.push(...files);
-      }
-      
-      // Remove duplicates and sort
-      return [...new Set(allFiles)].sort();
-      
-    } catch (error) {
-      this.auditLogger?.logError(error, {
-        operation: 'find_raw_files',
-        inputPath
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Process a single RAW file
-   */
-  async processRawFile(inputFile, outputDir, options) {
-    const { quality, resize, dryRun, auditLogger } = options;
-    
-    auditLogger.startOperation(`convert_${path.basename(inputFile)}`);
-    
-    try {
-      // Generate output filename
-      const inputName = path.parse(inputFile).name;
-      const outputFile = path.join(outputDir, `${inputName}.jpg`);
-      
-      // Check if output already exists
-      if (await fs.pathExists(outputFile) && !options.force) {
-        auditLogger.logDecision('file_exists', 
-          { inputFile, outputFile },
-          'skip',
-          'Output file already exists and --force not specified'
-        );
-        
-        auditLogger.endOperation({ skipped: true });
-        return { success: false, error: 'File already exists', outputFile };
-      }
-
-      // Extract comprehensive metadata using enhanced preserver
-      let originalMetadata = null;
-      try {
-        originalMetadata = await this.metadataPreserver.extractMetadata(inputFile);
-        
-        auditLogger.logEvent('metadata_extracted_enhanced', {
-          file: path.basename(inputFile),
-          camera: originalMetadata.full.Make && originalMetadata.full.Model ? 
-                  `${originalMetadata.full.Make} ${originalMetadata.full.Model}` : 'Unknown',
-          iso: originalMetadata.full.ISO,
-          aperture: originalMetadata.full.FNumber,
-          shutterSpeed: originalMetadata.full.ExposureTime,
-          primaryTimestamp: originalMetadata.timestamps.primary?.iso || 'none',
-          timestampFields: originalMetadata.timestamps.count,
-          totalMetadataFields: Object.keys(originalMetadata.full).length
-        });
-        
-      } catch (metaError) {
-        auditLogger.logError(metaError, {
-          file: inputFile,
-          operation: 'enhanced_metadata_extraction'
-        });
-        
-        auditLogger.logFallback('metadata_extraction', 
-          'enhanced_preserver', 'basic_processing', 
-          `Enhanced metadata extraction failed: ${metaError.message}`,
-          true
-        );
-      }
-
-      if (dryRun) {
-        auditLogger.logEvent('dry_run_convert', {
-          inputFile,
-          outputFile,
-          quality,
-          resize
-        });
-        
-        auditLogger.endOperation({ dryRun: true });
-        return { success: true, outputFile, dryRun: true };
-      }
-
-      // Process with enhanced metadata preservation
-      let preservationResult = null;
-      
-      if (originalMetadata) {
-        // Use enhanced metadata preservation workflow
-        preservationResult = await this.metadataPreserver.processWithPreservation(
-          inputFile, 
-          outputFile, 
-          async () => {
-            await this.performSharpConversion(inputFile, outputFile, { quality, resize, auditLogger });
-          }
-        );
-        
-        auditLogger.logEvent('enhanced_conversion_complete', {
-          inputFile: path.basename(inputFile),
-          outputFile: path.basename(outputFile),
-          metadataPreserved: preservationResult.success,
-          timestampIntegrity: preservationResult.embedResult.timestampVerified,
-          preservationDuration: preservationResult.duration
-        });
-        
-      } else {
-        // Fallback to standard processing without metadata preservation
-        auditLogger.logEvent('fallback_conversion_start', {
-          inputFile: path.basename(inputFile),
-          reason: 'no_metadata_extracted'
-        });
-        
-        await this.performSharpConversion(inputFile, outputFile, { quality, resize, auditLogger });
-      }
-      
-      // Verify output file
-      const stats = await fs.stat(outputFile);
-      const inputStats = await fs.stat(inputFile);
-      
-      auditLogger.logEvent('file_converted', {
-        inputFile: path.basename(inputFile),
-        outputFile: path.basename(outputFile),
-        inputSize: inputStats.size,
-        outputSize: stats.size,
-        compressionRatio: (inputStats.size / stats.size).toFixed(2),
-        metadataPreservationUsed: !!originalMetadata,
-        timestampVerified: preservationResult?.embedResult?.timestampVerified || false
-      });
-
-      auditLogger.endOperation({ 
-        success: true,
-        outputSize: stats.size
-      });
-
-      return {
-        success: true,
-        outputFile,
-        inputSize: inputStats.size,
-        outputSize: stats.size,
-        originalMetadata,
-        preservationResult,
-        timestampVerified: preservationResult?.embedResult?.timestampVerified || false
-      };
-
-    } catch (error) {
-      auditLogger.logError(error, {
-        inputFile,
-        operation: 'process_raw_file'
-      });
-      
-      auditLogger.endOperation({ error: error.message });
-      
-      // Try fallback processing
-      try {
-        return await this.fallbackConversion(inputFile, outputDir, options);
-      } catch (fallbackError) {
-        auditLogger.logFallback('conversion_method',
-          'sharp_standard', 'fallback_failed',
-          fallbackError.message,
-          false
-        );
-        
-        return { success: false, error: error.message };
-      }
-    }
-  }
-
-  /**
-   * Perform Sharp conversion without metadata handling
-   */
-  async performSharpConversion(inputFile, outputFile, options) {
-    const { quality, resize, auditLogger } = options;
-    
-    // Build Sharp instance
-    let sharpInstance = sharp(inputFile);
-    
-    // Apply resize if specified
-    if (resize) {
-      const [width, height] = resize.split('x').map(Number);
-      sharpInstance = sharpInstance.resize(width, height, {
-        fit: 'inside',
-        withoutEnlargement: true
-      });
-      
-      auditLogger?.logDecision('resize_applied',
-        { resize, width, height },
-        'resized',
-        `Image will be resized to fit ${width}x${height}`
-      );
-    }
-
-    // Apply basic corrections and JPEG settings
-    sharpInstance = sharpInstance
-      .jpeg({ 
-        quality,
-        mozjpeg: true,
-        progressive: true
-      });
-
-    // Write file
-    await sharpInstance.toFile(outputFile);
-  }
-
-  /**
-   * Fallback conversion method
-   */
-  async fallbackConversion(inputFile, outputDir, options) {
-    const { quality, auditLogger } = options;
-    
-    auditLogger.logFallback('conversion_method',
-      'sharp_standard', 'sharp_basic',
-      'Standard processing failed, trying basic conversion',
-      true
+    const patterns = this.supportedFormats.map(ext => 
+      path.join(inputPath, `**/*${ext}`)
     );
-
-    const inputName = path.parse(inputFile).name;
-    const outputFile = path.join(outputDir, `${inputName}.jpg`);
-
-    // Basic conversion without advanced options
-    await sharp(inputFile)
-      .jpeg({ quality: Math.max(quality - 10, 50) }) // Reduce quality slightly
-      .toFile(outputFile);
-
-    const stats = await fs.stat(outputFile);
     
-    auditLogger.logEvent('fallback_conversion_success', {
-      inputFile,
-      outputFile,
-      method: 'sharp_basic',
-      outputSize: stats.size
-    });
-
-    return {
-      success: true,
-      outputFile,
-      fallback: true,
-      outputSize: stats.size
-    };
+    const files = [];
+    for (const pattern of patterns) {
+      const matches = await glob(pattern, { nocase: true });
+      files.push(...matches);
+    }
+    
+    return files;
   }
 
   /**
-   * Get format statistics
+   * Get format breakdown of files
    */
-  getFormatStats(files) {
-    const stats = {};
-    files.forEach(file => {
+  getFormatBreakdown(files) {
+    const breakdown = {};
+    for (const file of files) {
       const ext = path.extname(file).toLowerCase();
-      stats[ext] = (stats[ext] || 0) + 1;
-    });
-    return stats;
+      breakdown[ext] = (breakdown[ext] || 0) + 1;
+    }
+    return breakdown;
   }
 
   /**
-   * Create conversion report
+   * Verify metadata preservation between original and converted files
    */
-  async createConversionReport(outputPath, results, originalFiles) {
-    const report = {
-      stage: 'convert',
-      timestamp: new Date().toISOString(),
-      summary: {
-        totalInputFiles: originalFiles.length,
-        filesProcessed: results.filesProcessed,
-        filesSkipped: results.filesSkipped,
-        errors: results.errors.length,
-        duration: results.duration,
-        averageTimePerFile: results.filesProcessed > 0 ? results.duration / results.filesProcessed : 0
-      },
-      fileFormats: this.getFormatStats(originalFiles),
-      errors: results.errors,
-      outputFiles: results.outputFiles || [],
-      metadataPreservation: {
-        filesWithMetadata: results.outputFiles ? results.outputFiles.filter(f => f.timestampVerified).length : 0,
-        timestampVerificationRate: results.outputFiles && results.outputFiles.length > 0 ? 
-          ((results.outputFiles.filter(f => f.timestampVerified).length / results.outputFiles.length) * 100).toFixed(2) + '%' : '0%'
-      }
-    };
-
-    const reportPath = path.join(outputPath, 'conversion_report.json');
-    await fs.writeJson(reportPath, report, { spaces: 2 });
-
-    return report;
-  }
-
-  /**
-   * Mock conversion process for testing
-   */
-  async mockConversionProcess(inputPath, outputPath, options, startTime) {
-    const { auditLogger, dryRun = false } = options;
-    
-    auditLogger.logEvent('mock_conversion_start', {
-      inputPath,
-      outputPath,
-      mockMode: true
-    });
-
-    // Find all RAW files to simulate processing them
-    const rawFiles = await this.findRawFiles(inputPath);
-    
-    auditLogger.logEvent('mock_raw_files_found', {
-      totalFiles: rawFiles.length,
-      formats: this.getFormatStats(rawFiles)
-    });
-
-    if (rawFiles.length === 0) {
-      auditLogger.logDecision('mock_no_raw_files', 
-        { inputPath },
-        'skip_conversion',
-        'No RAW files found for mock conversion'
-      );
-      
-      return {
-        success: true,
-        filesProcessed: 0,
-        filesSkipped: 0,
-        duration: Date.now() - startTime,
-        mockMode: true
-      };
+  verifyMetadataPreservation(originalMeta, convertedMeta) {
+    if (!originalMeta?.timestamps?.primary || !convertedMeta?.timestamps?.primary) {
+      return false;
     }
-
-    const results = {
-      success: true,
-      filesProcessed: 0,
-      filesSkipped: 0,
-      errors: [],
-      duration: 0,
-      outputFiles: [],
-      mockMode: true
-    };
-
-    // Simulate processing each RAW file
-    for (const rawFile of rawFiles) {
-      try {
-        const inputName = path.parse(rawFile).name;
-        const outputFile = path.join(outputPath, `${inputName}.jpg`);
-        
-        auditLogger.logEvent('mock_file_processing', {
-          inputFile: path.basename(rawFile),
-          outputFile: path.basename(outputFile),
-          simulatedConversion: true
-        });
-
-        if (!dryRun) {
-          // Create a simple mock JPEG file by copying a placeholder or creating a small image
-          await this.createMockJpeg(outputFile, auditLogger);
-        }
-
-        results.filesProcessed++;
-        results.outputFiles.push({
-          inputFile: rawFile,
-          outputFile: outputFile,
-          mockConversion: true,
-          timestampVerified: true // Mock successful metadata preservation
-        });
-
-        // Add a small delay to simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-      } catch (error) {
-        auditLogger.logError(error, {
-          file: rawFile,
-          operation: 'mock_convert_file'
-        });
-        
-        results.errors.push({
-          file: rawFile,
-          error: error.message
-        });
-        results.filesSkipped++;
-      }
-    }
-
-    results.duration = Date.now() - startTime;
     
-    auditLogger.logEvent('mock_conversion_complete', {
-      totalFiles: rawFiles.length,
-      filesProcessed: results.filesProcessed,
-      filesSkipped: results.filesSkipped,
-      errors: results.errors.length,
-      duration: results.duration,
-      mockMode: true
-    });
-
-    // Create mock conversion report
-    await this.createConversionReport(outputPath, results, rawFiles);
-
-    return results;
-  }
-
-  /**
-   * Create a mock JPEG file for testing
-   */
-  async createMockJpeg(outputFile, auditLogger) {
-    try {
-      // Ensure output directory exists
-      await fs.ensureDir(path.dirname(outputFile));
-      
-      // Create a simple 640x480 solid color JPEG as a placeholder
-      const mockImageBuffer = await sharp({
-        create: {
-          width: 640,
-          height: 480,
-          channels: 3,
-          background: { r: 100, g: 100, b: 100 }
-        }
-      })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-      
-      await fs.writeFile(outputFile, mockImageBuffer);
-      
-      auditLogger.logEvent('mock_jpeg_created', {
-        outputFile: path.basename(outputFile),
-        size: mockImageBuffer.length,
-        dimensions: '640x480'
-      });
-      
-    } catch (error) {
-      auditLogger.logError(error, {
-        outputFile,
-        operation: 'create_mock_jpeg'
-      });
-      throw error;
-    }
+    // Check if primary timestamp matches
+    const origTime = originalMeta.timestamps.primary.value;
+    const convTime = convertedMeta.timestamps.primary.value;
+    
+    return origTime === convTime;
   }
 }
 
